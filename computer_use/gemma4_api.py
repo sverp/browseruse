@@ -3,7 +3,31 @@ import os
 import requests
 from typing import Any
 
-API_KEY = os.getenv("GEMINI_API_KEY", "")
+from pathlib import Path
+
+def _load_api_key() -> str:
+    key = os.getenv("GEMINI_API_KEY", "").strip()
+    if key:
+        return key
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+        key = os.getenv("GEMINI_API_KEY", "").strip()
+        if key:
+            return key
+    except Exception:
+        pass
+    for path in [Path(".env"), Path("../.env"), Path("../gemma_key"), Path.home() / "gith/gemma_key"]:
+        if path.exists():
+            for line in path.read_text().splitlines():
+                line = line.strip()
+                if line.startswith("GEMINI_API_KEY="):
+                    return line.split("=", 1)[1].strip().strip('"\'')
+                elif line.startswith("AQ."):
+                    return line
+    return ""
+
+API_KEY = _load_api_key()
 MODEL = "gemma-4-26b-a4b-it"
 URL = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent"
 
